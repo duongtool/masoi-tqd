@@ -1,8 +1,8 @@
-# 🐺 Ma Sói - Werewolf Web Game
+# 🐺 Ma Sói - T Q D 💗 
 
-> **Toàn bộ dev bởi T Q D 💗**
+> **Full code dev bởi T Q D 💗**
 
-Website trò chơi Ma Sói (Werewolf) chạy hoàn toàn trên trình duyệt — không cần server, không cần Discord.
+Website trò chơi Ma Sói 
 
 ## 🚀 Cách dùng
 
