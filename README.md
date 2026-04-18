@@ -1,6 +1,6 @@
 # 🐺 Ma Sói - T Q D 💗 
 
-> **Full code dev bởi T Q D 💗**
+> **Full code html dev bởi T Q D 💗 dựa trên source có sẵn nhặt được trên github quên mẹ nguồn rồi nên chưa gắn 🙄**
 
 Website trò chơi Ma Sói 
 
