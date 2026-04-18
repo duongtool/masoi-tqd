@@ -4,8 +4,6 @@
 >
 > **Chủ source có thấy vui vẻ nhé ☺️**
 
-Website trò chơi Ma Sói 
-
 ## 🚀 Cách dùng
 
 1. Mở `index.html` trên trình duyệt bất kỳ
