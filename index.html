@@ -1,239 +1,298 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🐺 Ma Sói - Werewolf | T Q D 💗</title>
-  <link rel="stylesheet" href="css/style.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🐺 Ma Sói — T Q D 💗</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=IM+Fell+English:ital@0;1&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet"/>
 </head>
 <body>
 
-<!-- PARTICLE BACKGROUND -->
-<div id="particles"></div>
-<div class="moon-glow"></div>
-<div class="fog-overlay"></div>
+<!-- Stars canvas -->
+<canvas id="stars-canvas"></canvas>
 
-<!-- LANGUAGE TOGGLE -->
-<div class="lang-toggle" id="langToggle">
-  <button class="lang-btn active" data-lang="vi" onclick="setLang('vi')">🇻🇳 VI</button>
-  <button class="lang-btn" data-lang="en" onclick="setLang('en')">🇬🇧 EN</button>
-</div>
+<!-- Credit bottom center -->
+<div class="credit-badge">T &nbsp; Q &nbsp; D &nbsp; 💗</div>
 
-<!-- CREDIT -->
-<div class="credit-badge">💗 T Q D</div>
-
-<!-- MAIN SCREENS -->
 <div id="app">
-
-  <!-- ===== SCREEN: LANDING ===== -->
   <div class="screen active" id="screen-landing">
     <div class="landing-hero">
-      <div class="wolf-icon">🐺</div>
-      <h1 class="game-title" data-vi="Ma Sói" data-en="Werewolf">Ma Sói</h1>
-      <p class="game-subtitle" data-vi="Trò chơi suy luận đêm tối — ai là kẻ ẩn nấp trong bóng tối?" data-en="The game of deception in the dark — who hides among you?">Trò chơi suy luận đêm tối — ai là kẻ ẩn nấp trong bóng tối?</p>
+      <span class="wolf-icon">🐺</span>
+      <h1 class="game-title">Ma Sói</h1>
+      <p class="game-subtitle">Ai đang ẩn nấp trong bóng tối?</p>
       <div class="landing-btns">
-        <button class="btn-primary" onclick="goScreen('screen-setup')">
-          <span data-vi="🎮 Bắt đầu chơi" data-en="🎮 Start Game">🎮 Bắt đầu chơi</span>
-        </button>
-        <button class="btn-secondary" onclick="goScreen('screen-roles')">
-          <span data-vi="📖 Xem vai trò" data-en="📖 View Roles">📖 Xem vai trò</span>
-        </button>
-        <button class="btn-secondary" onclick="goScreen('screen-howto')">
-          <span data-vi="❓ Cách chơi" data-en="❓ How to Play">❓ Cách chơi</span>
-        </button>
+        <button class="btn-primary" onclick="goTo('screen-name')">🎮 Bắt đầu chơi</button>
+        <button class="btn-secondary" onclick="goTo('screen-roles-info')">📖 Xem vai trò</button>
+        <button class="btn-secondary" onclick="goTo('screen-howto')">❓ Cách chơi</button>
       </div>
     </div>
   </div>
 
-  <!-- ===== SCREEN: HOW TO PLAY ===== -->
-  <div class="screen" id="screen-howto">
-    <div class="screen-inner">
-      <button class="back-btn" onclick="goScreen('screen-landing')">← <span data-vi="Quay lại" data-en="Back">Quay lại</span></button>
-      <h2 class="section-title" data-vi="📜 Cách chơi" data-en="📜 How to Play">📜 Cách chơi</h2>
-      <div class="howto-grid">
-        <div class="howto-card" data-delay="0">
-          <div class="howto-num">1</div>
-          <h3 data-vi="Chuẩn bị" data-en="Setup">Chuẩn bị</h3>
-          <p data-vi="Nhập tên người chơi (4–20 người). Host phân vai ngẫu nhiên. Mỗi người chỉ biết vai của mình." data-en="Enter player names (4–20 players). Host assigns roles randomly. Each player only knows their own role.">Nhập tên người chơi (4–20 người). Host phân vai ngẫu nhiên. Mỗi người chỉ biết vai của mình.</p>
+  
+  <div class="screen" id="screen-name">
+    <div class="box">
+      <button class="back-btn" onclick="goTo('screen-landing')">← Quay lại</button>
+      <p class="box-title">🐾 Nhập tên của bạn</p>
+      <label class="form-label">Tên hiển thị trong game</label>
+      <input class="text-input" id="name-input" type="text" maxlength="16" placeholder="Tên của bạn..."/>
+      <button class="btn-form" id="name-next-btn" onclick="doNameNext()" disabled>Tiếp theo →</button>
+    </div>
+  </div>
+
+ 
+  <div class="screen" id="screen-room-choice">
+    <div class="box">
+      <button class="back-btn" onclick="goTo('screen-name')">← Quay lại</button>
+      <p class="box-title">Xin chào, <span id="greet-name" style="color:var(--accent)"></span>! 👋</p>
+      <div class="room-choices">
+        <div class="choice-card" onclick="goTo('screen-create-room')">
+          <div class="cc-icon">🏠</div>
+          <div class="cc-name">Tạo phòng</div>
+          <div class="cc-desc">Tạo phòng mới và mời bạn bè vào</div>
         </div>
-        <div class="howto-card" data-delay="100">
-          <div class="howto-num">🌙</div>
-          <h3 data-vi="Pha Đêm" data-en="Night Phase">Pha Đêm</h3>
-          <p data-vi="Tất cả nhắm mắt. Các vai đặc biệt lần lượt thức dậy thực hiện hành động bí mật: Ma Sói chọn nạn nhân, Tiên tri xem bài, Bác sĩ cứu người, Phù thủy dùng thuốc…" data-en="Everyone closes eyes. Special roles wake up one by one to perform secret actions: Werewolves pick a victim, Seer checks a player, Doctor saves someone, Witch uses potions…">Tất cả nhắm mắt. Các vai đặc biệt lần lượt thức dậy thực hiện hành động bí mật.</p>
+        <div class="choice-card" onclick="goTo('screen-join-room')">
+          <div class="cc-icon">🔑</div>
+          <div class="cc-name">Vào phòng</div>
+          <div class="cc-desc">Nhập ID phòng để tham gia</div>
         </div>
-        <div class="howto-card" data-delay="200">
-          <div class="howto-num">☀️</div>
-          <h3 data-vi="Pha Ngày" data-en="Day Phase">Pha Ngày</h3>
-          <p data-vi="Tất cả thức dậy. MC thông báo ai đã chết đêm qua. Mọi người tranh luận, suy luận và bỏ phiếu loại người bị nghi ngờ là Ma Sói." data-en="Everyone wakes up. MC announces who died last night. Players debate, deduce and vote to eliminate the most suspicious player.">Tất cả thức dậy. MC thông báo ai đã chết. Mọi người tranh luận và bỏ phiếu loại người nghi ngờ.</p>
-        </div>
-        <div class="howto-card" data-delay="300">
-          <div class="howto-num">🏆</div>
-          <h3 data-vi="Chiến thắng" data-en="Victory">Chiến thắng</h3>
-          <p data-vi="Dân làng thắng khi tiêu diệt hết Ma Sói. Ma Sói thắng khi số lượng bằng hoặc vượt dân làng." data-en="Villagers win when all werewolves are eliminated. Werewolves win when their count equals or exceeds the villagers.">Dân làng thắng khi tiêu diệt hết Ma Sói. Ma Sói thắng khi số lượng bằng hoặc vượt dân làng.</p>
-        </div>
-      </div>
-      <div class="tip-box">
-        <p>💡 <strong data-vi="Mẹo:" data-en="Tip:">Mẹo:</strong> <span data-vi="Người dẫn game (MC/Host) cần đọc thứ tự hành động đêm từ bảng điều khiển và không tiết lộ thông tin bí mật. Website này hỗ trợ host điều phối game nhanh hơn!" data-en="The game host (MC) should follow the night action order from the control panel and never reveal secret info. This website helps the host manage the game more efficiently!">Người dẫn game (MC/Host) cần đọc thứ tự hành động đêm từ bảng điều khiển và không tiết lộ thông tin bí mật. Website này hỗ trợ host điều phối game nhanh hơn!</span></p>
       </div>
     </div>
   </div>
 
-  <!-- ===== SCREEN: ROLES ===== -->
-  <div class="screen" id="screen-roles">
-    <div class="screen-inner">
-      <button class="back-btn" onclick="goScreen('screen-landing')">← <span data-vi="Quay lại" data-en="Back">Quay lại</span></button>
-      <h2 class="section-title" data-vi="🎭 Các Vai Trò" data-en="🎭 All Roles">🎭 Các Vai Trò</h2>
-      <div class="roles-filter">
-        <button class="filter-btn active" onclick="filterRoles('all')" data-vi="Tất cả" data-en="All">Tất cả</button>
-        <button class="filter-btn" onclick="filterRoles('village')" data-vi="🏡 Dân làng" data-en="🏡 Village">🏡 Dân làng</button>
-        <button class="filter-btn" onclick="filterRoles('wolf')" data-vi="🐺 Ma Sói" data-en="🐺 Werewolf">🐺 Ma Sói</button>
-        <button class="filter-btn" onclick="filterRoles('special')" data-vi="⭐ Đặc biệt" data-en="⭐ Special">⭐ Đặc biệt</button>
-      </div>
-      <div class="roles-grid" id="rolesGrid"></div>
+  
+  <div class="screen" id="screen-create-room">
+    <div class="box">
+      <button class="back-btn" onclick="goTo('screen-room-choice')">← Quay lại</button>
+      <p class="box-title">🏠 Tạo phòng mới</p>
+      <label class="form-label">Tên phòng</label>
+      <input class="text-input" id="room-name-input" type="text" maxlength="20" placeholder="Tên phòng của bạn..."/>
+      <button class="btn-form" id="create-room-btn" onclick="createRoom()" disabled>🚀 Tạo phòng</button>
     </div>
   </div>
 
-  <!-- ===== SCREEN: SETUP ===== -->
-  <div class="screen" id="screen-setup">
-    <div class="screen-inner">
-      <button class="back-btn" onclick="goScreen('screen-landing')">← <span data-vi="Quay lại" data-en="Back">Quay lại</span></button>
-      <h2 class="section-title" data-vi="⚙️ Thiết lập phòng" data-en="⚙️ Room Setup">⚙️ Thiết lập phòng</h2>
-
-      <div class="setup-section">
-        <h3 data-vi="👥 Thêm người chơi" data-en="👥 Add Players">👥 Thêm người chơi</h3>
-        <div class="player-input-row">
-          <input type="text" id="playerNameInput" class="text-input" placeholder="" maxlength="20" onkeydown="if(event.key==='Enter') addPlayer()" />
-          <button class="btn-add" onclick="addPlayer()">+</button>
-        </div>
-        <div id="playerList" class="player-list"></div>
-        <p class="player-count-label"><span id="playerCount">0</span> <span data-vi="người chơi" data-en="players">người chơi</span> <span class="count-hint" data-vi="(cần 4–20)" data-en="(need 4–20)">(cần 4–20)</span></p>
+  
+  <div class="screen" id="screen-join-room">
+    <div class="box">
+      <button class="back-btn" onclick="goTo('screen-room-choice')">← Quay lại</button>
+      <p class="box-title">🔑 Vào phòng bạn bè</p>
+      <label class="form-label">ID phòng</label>
+      <div class="join-row">
+        <input class="text-input" id="join-id-input" type="text" maxlength="8"
+          placeholder="Ví dụ: AB12CD" style="text-transform:uppercase"/>
+        <button class="join-btn" onclick="joinRoom()">Vào →</button>
       </div>
-
-      <div class="setup-section">
-        <h3 data-vi="🎭 Chọn vai trò" data-en="🎭 Select Roles">🎭 Chọn vai trò</h3>
-        <div class="role-picker" id="rolePicker"></div>
-        <div class="role-summary">
-          <span data-vi="Vai đã chọn:" data-en="Roles selected:">Vai đã chọn:</span>
-          <span id="roleSummary" class="role-summary-text">0</span>
-          <span data-vi="/ Người chơi:" data-en="/ Players:">/ Người chơi:</span>
-          <span id="playerCountSummary">0</span>
-        </div>
-      </div>
-
-      <div class="setup-section">
-        <h3 data-vi="⏱️ Thời gian thảo luận" data-en="⏱️ Discussion Time">⏱️ Thời gian thảo luận</h3>
-        <div class="time-picker">
-          <button class="time-btn" onclick="setTime(60)">1 <span data-vi="phút" data-en="min">phút</span></button>
-          <button class="time-btn active" onclick="setTime(120)">2 <span data-vi="phút" data-en="min">phút</span></button>
-          <button class="time-btn" onclick="setTime(180)">3 <span data-vi="phút" data-en="min">phút</span></button>
-          <button class="time-btn" onclick="setTime(300)">5 <span data-vi="phút" data-en="min">phút</span></button>
-        </div>
-      </div>
-
-      <button class="btn-primary btn-large" onclick="startGame()" id="startGameBtn">
-        <span data-vi="🎮 Bắt đầu Game!" data-en="🎮 Start Game!">🎮 Bắt đầu Game!</span>
-      </button>
+      <p style="font-size:12px;color:var(--muted);margin-top:10px">
+        ID phòng do chủ phòng gửi cho bạn (nhấn vào ID trong phòng để copy)
+      </p>
     </div>
   </div>
 
-  <!-- ===== SCREEN: ROLE REVEAL ===== -->
+  
+  <div class="screen" id="screen-waiting">
+    <div class="box">
+      <div class="wr-header">
+        <span class="wr-room-name" id="wr-room-name"></span>
+        <span class="room-id-chip" onclick="copyRoomId(document.getElementById('wr-room-id').textContent)">
+          📋 <span id="wr-room-id"></span>
+          <span class="copied-tip" id="copied-tip">✓ Đã copy!</span>
+        </span>
+      </div>
+
+      <div class="wr-count-label">
+        Người chơi: <strong id="wr-count">0</strong> / <strong id="wr-max">22</strong>
+      </div>
+
+      <div class="player-slots" id="wr-player-slots"></div>
+
+      <!-- Host controls -->
+      <div id="wr-host-ctrl" style="display:none">
+        <div class="mc-notice">
+          👑 Bạn là chủ phòng<br>
+          <small>MC sẽ được chọn ngẫu nhiên khi game bắt đầu — MC không chơi, chỉ điều phối</small>
+        </div>
+        <label class="form-label">Số người chơi (không tính MC)</label>
+        <select class="text-input" id="wr-max-sel" style="margin-bottom:12px">
+          <option value="5">5 người + 1 MC (test nhanh)</option>
+          <option value="9">9 người + 1 MC</option>
+          <option value="14">14 người + 1 MC</option>
+          <option value="21" selected>21 người + 1 MC</option>
+        </select>
+        <button class="btn-form" id="wr-start-btn" onclick="hostStartGame()" disabled></button>
+      </div>
+
+      <!-- Guest message -->
+      <div id="wr-guest-msg" style="text-align:center;color:var(--muted);font-size:14px;padding:10px 0">
+        ⏳ Chờ chủ phòng bắt đầu game...
+      </div>
+    </div>
+  </div>
+
   <div class="screen" id="screen-reveal">
-    <div class="screen-inner reveal-container">
-      <h2 class="section-title" id="revealTitle"></h2>
-      <p class="reveal-instruction" id="revealInstruction"></p>
+    <div class="reveal-wrap">
 
-      <div class="reveal-card" id="revealCard" onclick="flipCard()">
-        <div class="card-inner" id="cardInner">
-          <div class="card-front">
-            <div class="card-front-icon">🔒</div>
-            <p id="cardFrontName"></p>
-            <p class="card-tap-hint" data-vi="Nhấn để xem vai" data-en="Tap to reveal role">Nhấn để xem vai</p>
-          </div>
-          <div class="card-back" id="cardBack">
-            <div class="card-role-icon" id="cardRoleIcon"></div>
-            <h3 id="cardRoleName"></h3>
-            <p id="cardRoleDesc"></p>
-          </div>
-        </div>
+      <button class="back-btn" onclick="leaveGame()" style="justify-content:center;margin-bottom:10px">
+        🏠 Rời game
+      </button>
+
+      <!-- MC announcement -->
+      <div class="mc-announce" id="mc-announce" style="display:none">
+        🎲 MC được chọn ngẫu nhiên:<br>
+        <strong id="mc-announce-name"></strong>
+        <br><small style="color:var(--muted)">MC không tham gia chơi, không biết vai của ai</small>
       </div>
 
-      <div class="reveal-progress" id="revealProgress"></div>
-
-      <div class="reveal-actions" id="revealActions" style="display:none;">
-        <button class="btn-primary" onclick="nextReveal()" id="btnNextReveal"></button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== SCREEN: GAME BOARD ===== -->
-  <div class="screen" id="screen-game">
-    <div class="game-layout">
-
-      <!-- TOP BAR -->
-      <div class="game-topbar">
-        <div class="phase-badge" id="phaseBadge">🌙 <span data-vi="Đêm 1" data-en="Night 1">Đêm 1</span></div>
-        <div class="timer-display" id="timerDisplay">00:00</div>
-        <div class="game-actions-top">
-          <button class="icon-btn" onclick="toggleTimer()" id="timerBtn" title="Start/Stop Timer">⏯️</button>
-          <button class="icon-btn" onclick="goScreen('screen-landing')" title="Menu">🏠</button>
-        </div>
-      </div>
-
-      <!-- PLAYER GRID -->
-      <div class="player-grid" id="playerGrid"></div>
-
-      <!-- NIGHT ACTION PANEL -->
-      <div class="night-panel" id="nightPanel">
-        <h3 class="night-title" id="nightTitle"></h3>
-        <div class="night-steps" id="nightSteps"></div>
-      </div>
-
-      <!-- DAY CONTROL -->
-      <div class="day-panel" id="dayPanel" style="display:none;">
-        <div class="day-announce" id="dayAnnounce"></div>
-        <button class="btn-phase" onclick="endDay()">
-          <span data-vi="🌙 Vào đêm tiếp theo" data-en="🌙 Next Night">🌙 Vào đêm tiếp theo</span>
-        </button>
-      </div>
-
-      <!-- WINNER -->
-      <div class="winner-overlay" id="winnerOverlay" style="display:none;">
-        <div class="winner-box">
-          <div class="winner-icon" id="winnerIcon"></div>
-          <h2 id="winnerTitle"></h2>
-          <p id="winnerDesc"></p>
-          <button class="btn-primary" onclick="goScreen('screen-landing')">
-            <span data-vi="🏠 Về trang chủ" data-en="🏠 Home">🏠 Về trang chủ</span>
+      <!-- MC view (không xem bài) -->
+      <div id="mc-reveal-view" style="display:none">
+        <div class="mc-reveal-view">
+          <div class="mc-icon">👁️</div>
+          <h3>Bạn là MC của ván này!</h3>
+          <p style="color:var(--muted);font-size:13px;margin-bottom:16px">
+            Theo dõi tiến độ xem bài. Khi tất cả đã xem xong, ấn nút bên dưới để bắt đầu đêm đầu tiên.
+          </p>
+          <div class="mc-rev-progress" id="mc-rev-progress">0 / 0 người đã xem</div>
+          <button class="btn-form" id="mc-start-btn" onclick="mcBeginNight()" style="display:none;max-width:280px;margin:0 auto">
+            🌙 Bắt đầu đêm đầu tiên!
           </button>
         </div>
       </div>
 
+      <!-- Player view (lật bài) -->
+      <div id="non-mc-reveal">
+        <p class="rev-who" id="rev-who">Lượt xem bài của:</p>
+        <span class="rev-who-name" id="rev-who-name"></span>
+        <div class="prog-bar"><div class="prog-fill" id="rev-prog-fill" style="width:0%"></div></div>
+        <p class="rev-count" id="rev-count"></p>
+
+        <div class="flip-outer" id="flip-outer" onclick="flipRevealCard()">
+          <div class="flip-inner" id="flip-inner">
+            <div class="card-face card-front">
+              <div class="lock-icon">🔒</div>
+              <p class="card-pname" id="card-pname"></p>
+              <p class="tap-hint">Nhấn để xem vai của bạn</p>
+            </div>
+            <div class="card-face card-back" id="card-back">
+              <div class="card-role-icon" id="card-role-icon"></div>
+              <div class="card-role-name" id="card-role-name"></div>
+              <div class="card-role-desc" id="card-role-desc"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="rev-btn-wrap">
+          <button class="btn-form" id="rev-next-btn" onclick="revealNext()" style="display:none"></button>
+          <button class="btn-form" id="rev-start-btn" onclick="mcBeginNight()" style="display:none">🌙 Bắt đầu đêm!</button>
+          <p class="rev-mc-msg" id="rev-mc-msg" style="display:none"></p>
+        </div>
+      </div>
+
     </div>
   </div>
 
-</div>
-
-<!-- TOAST NOTIFICATION -->
-<div class="toast" id="toast"></div>
-
-<!-- MODAL -->
-<div class="modal-overlay" id="modalOverlay" onclick="closeModal()" style="display:none;">
-  <div class="modal-box" onclick="event.stopPropagation()">
-    <div class="modal-icon" id="modalIcon"></div>
-    <h3 id="modalTitle"></h3>
-    <p id="modalDesc"></p>
-    <div class="modal-actions">
-      <button class="btn-secondary" onclick="closeModal()" id="modalCancel"></button>
-      <button class="btn-primary" onclick="modalConfirm()" id="modalOk"></button>
+  
+  <div class="screen wide" id="screen-game">
+    <div class="game-header">
+      <span class="phase-label night" id="phase-label">🌙 Đêm 1</span>
+      <span class="timer-display" id="timer-display">00:00</span>
+      <div style="display:flex;gap:6px">
+        <button class="header-btn" onclick="toggleTimer()" title="Bắt đầu/dừng đếm giờ">⏯</button>
+        <button class="header-btn" onclick="leaveGame()" title="Về trang chủ">🏠</button>
+      </div>
     </div>
+
+    <!-- Player grid -->
+    <div class="player-grid" id="player-grid"></div>
+
+    <!-- Log -->
+    <div class="game-log">
+      <div class="log-title">📜 Nhật ký game</div>
+      <div id="log-entries"></div>
+    </div>
+
+    <!-- Night panel -->
+    <div class="game-panel" id="night-panel">
+      <h3>🌙 Pha đêm</h3>
+      <div id="night-steps"></div>
+      <div class="actions-row" id="night-acts"></div>
+    </div>
+
+    <!-- Day panel -->
+    <div class="game-panel" id="day-panel" style="display:none">
+      <h3>☀️ Ban ngày — Thảo luận & Bỏ phiếu</h3>
+      <div id="day-announce"></div>
+      <div id="vote-info-box"></div>
+      <div class="actions-row" id="day-acts"></div>
+    </div>
+
+  </div>
+
+ 
+  <div class="screen" id="screen-roles-info">
+    <button class="back-btn" onclick="goTo('screen-landing')" style="margin-bottom:12px">← Quay lại</button>
+    <p style="font-family:'Cinzel Decorative',serif;color:var(--accent);text-align:center;font-size:16px;margin-bottom:16px">
+      🎭 Các Vai Trò
+    </p>
+    <div class="roles-grid" id="roles-info-grid"></div>
+  </div>
+
+ 
+  <div class="screen" id="screen-howto">
+    <div class="box">
+      <button class="back-btn" onclick="goTo('screen-landing')">← Quay lại</button>
+      <p class="box-title">❓ Cách chơi</p>
+      <div class="howto-body">
+
+        <h4>🎲 Chọn MC tự động</h4>
+        <p>Khi game bắt đầu, hệ thống sẽ <strong>random 1 người làm MC</strong>. MC không nhận vai, không biết bài của ai, chỉ điều phối game theo đúng luật.</p>
+
+        <h4>🌙 Pha Đêm (MC gọi từng vai)</h4>
+        <ul>
+          <li>Tất cả nhắm mắt, MC gọi từng phe theo thứ tự</li>
+          <li><span class="tag-wolf">Ma Sói / Đầu Đàn</span>: mở mắt, chọn 1 nạn nhân, nhắm mắt lại</li>
+          <li><span class="tag-village">Tiên Tri</span>: mở mắt, chỉ 1 người → MC gật/lắc đầu</li>
+          <li><span class="tag-village">Bác Sĩ</span>: mở mắt, chọn 1 người để cứu</li>
+          <li><span class="tag-village">Vệ Binh</span>: mở mắt, chọn 1 người để bảo vệ</li>
+          <li><span class="tag-village">Phù Thủy</span>: MC cho biết nạn nhân, dùng thuốc hay không</li>
+          <li><span class="tag-village">Thám Tử</span>: chọn 2 người → MC gật/lắc đầu (cùng phe?)</li>
+        </ul>
+
+        <h4>☀️ Pha Ngày</h4>
+        <p>MC thông báo ai chết. Mọi người thảo luận tự do. Sau đó bỏ phiếu: người nhiều phiếu nhất bị loại và lật bài ngay.</p>
+
+        <h4>🏆 Điều kiện thắng</h4>
+        <ul>
+          <li><span class="tag-village">Dân làng</span> thắng khi hết Ma Sói</li>
+          <li><span class="tag-wolf">Ma Sói</span> thắng khi số ≥ dân còn sống</li>
+          <li><span class="tag-neutral">Tên Hề</span> thắng riêng nếu bị bầu loại ban ngày</li>
+        </ul>
+
+        <h4>💡 Lưu ý quan trọng</h4>
+        <p>Game dùng localStorage — nhiều tab trên cùng trình duyệt sẽ đồng bộ. Để chơi thật online cần server backend.</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- #app -->
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Winner overlay -->
+<div class="win-overlay" id="win-overlay">
+  <div class="win-box">
+    <span class="win-icon" id="win-icon">🏆</span>
+    <div class="win-title" id="win-title"></div>
+    <div class="win-desc"  id="win-desc"></div>
+    <button class="btn-form" onclick="leaveGame()" style="max-width:240px;margin:0 auto">🏠 Về trang chủ</button>
   </div>
 </div>
 
+<!-- Scripts — thứ tự quan trọng -->
 <script src="js/roles.js"></script>
 <script src="js/game.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/main.js"></script>
+
 </body>
 </html>
