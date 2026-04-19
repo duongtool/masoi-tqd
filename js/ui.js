@@ -1,214 +1,417 @@
-// ================================================
-//   MA SÓI - UI HELPERS | T Q D 💗
-// ================================================
-
-// ===== SCREEN NAVIGATION =====
-
-function goScreen(screenId) {
+// ─── Navigation ───────────────────────────────────────────────
+function goTo(screenId) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const target = document.getElementById(screenId);
-  if (target) {
-    target.classList.add('active');
-    target.scrollTop = 0;
-    window.scrollTo(0, 0);
+  if (target) target.classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function leaveGame() {
+  stopTimer();
+  clearInterval(App.pollIv);
+  document.getElementById('win-overlay').style.display = 'none';
+  goTo('screen-landing');
+}
+
+// ─── Toast ────────────────────────────────────────────────────
+let _toastTm = null;
+function showToast(msg, duration = 2600) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTm);
+  _toastTm = setTimeout(() => el.classList.remove('show'), duration);
+}
+
+// ─── Stars ────────────────────────────────────────────────────
+function initStars() {
+  const c  = document.getElementById('stars-canvas');
+  const cx = c.getContext('2d');
+  const resize = () => { c.width = innerWidth; c.height = innerHeight; };
+  resize();
+  window.addEventListener('resize', resize);
+  const stars = Array.from({ length: 150 }, () => ({
+    px: Math.random(), py: Math.random(),
+    r:  Math.random() * 1.5 + 0.3,
+    a:  Math.random(),
+    da: (Math.random() - 0.5) * 0.007,
+  }));
+  const draw = () => {
+    cx.clearRect(0, 0, c.width, c.height);
+    stars.forEach(s => {
+      s.a = Math.max(0.1, Math.min(1, s.a + s.da));
+      if (s.a <= 0.1 || s.a >= 1) s.da *= -1;
+      cx.beginPath();
+      cx.arc(s.px * c.width, s.py * c.height, s.r, 0, Math.PI * 2);
+      cx.fillStyle = `rgba(255,255,255,${s.a})`;
+      cx.fill();
+    });
+    requestAnimationFrame(draw);
+  };
+  draw();
+}
+
+// ─── Roles Info Page ──────────────────────────────────────────
+function renderRolesInfo() {
+  const grid = document.getElementById('roles-info-grid');
+  if (!grid) return;
+  const colorMap = { wolf: 'wolf-c', village: 'vill-c', special: 'sp-c', neutral: 'neu-c' };
+  grid.innerHTML = ROLES.map(r => `
+    <div class="role-card ${colorMap[r.color] || ''}">
+      <div class="rc-icon">${r.icon}</div>
+      <div class="rc-name">${r.name}</div>
+      <div class="rc-desc">${r.desc}</div>
+      ${r.tip ? `<div class="rc-tip">💡 ${r.tip}</div>` : ''}
+    </div>`).join('');
+}
+
+// ─── Waiting Room ─────────────────────────────────────────────
+function renderWaitingRoom(room) {
+  const myId = App.myId;
+  document.getElementById('wr-room-name').textContent  = room.name;
+  document.getElementById('wr-room-id').textContent    = room.id;
+  document.getElementById('wr-count').textContent      = room.players.length;
+  document.getElementById('wr-max').textContent        = room.maxPlayers;
+
+  const isHost = room.host === myId;
+  document.getElementById('wr-host-ctrl').style.display  = isHost ? 'block' : 'none';
+  document.getElementById('wr-guest-msg').style.display  = isHost ? 'none'  : 'block';
+
+  if (isHost) {
+    document.getElementById('wr-max-sel').value = room.maxPlayers;
+    const ready = room.players.length >= room.maxPlayers;
+    const btn   = document.getElementById('wr-start-btn');
+    btn.disabled    = !ready;
+    btn.textContent = ready
+      ? '🎮 Bắt đầu game!'
+      : `⏳ Chờ thêm ${room.maxPlayers - room.players.length} người...`;
   }
 
-  // Init screens
-  if (screenId === 'screen-roles') renderRolesScreen();
-  if (screenId === 'screen-setup') {
-    renderPlayerList();
-    renderRolePicker();
-    updateRoleSummary();
-    updateLang();
+  const slots = document.getElementById('wr-player-slots');
+  slots.innerHTML = '';
+  for (let i = 0; i < room.maxPlayers; i++) {
+    const p   = room.players[i];
+    const div = document.createElement('div');
+    if (p) {
+      div.className = 'p-slot' + (p.id === myId ? ' me' : '');
+      div.innerHTML = `<div class="ps-avatar">🙂</div>
+        <div class="ps-name">${esc(p.name)}</div>
+        ${p.id === myId ? '<div class="ps-me">Bạn</div>' : ''}`;
+    } else {
+      div.className = 'p-slot empty';
+      div.innerHTML = `<div class="ps-avatar">·</div><div class="ps-name">— trống —</div>`;
+    }
+    slots.appendChild(div);
   }
 }
 
-// ===== ROLES SCREEN =====
+// ─── Reveal Screen ────────────────────────────────────────────
+function renderRevealScreen(gs, myId) {
+  const idx  = gs.revealIdx;
+  const ps   = gs.players;
+  const isMC = myId === gs.mcId;
 
-let currentFilter = 'all';
+  // Reset flip
+  document.getElementById('flip-inner').classList.remove('flipped');
+  App.revealFlipped = false;
+  document.getElementById('rev-next-btn').style.display  = 'none';
+  document.getElementById('rev-start-btn').style.display = 'none';
+  document.getElementById('rev-mc-msg').style.display    = 'none';
 
-function renderRolesScreen() {
-  const grid = document.getElementById('rolesGrid');
-  const filtered = currentFilter === 'all'
-    ? ROLES_DATA
-    : ROLES_DATA.filter(r => r.team === currentFilter);
+  // Progress
+  const pct = ps.length ? Math.round((idx / ps.length) * 100) : 0;
+  document.getElementById('rev-prog-fill').style.width = pct + '%';
+  document.getElementById('rev-count').textContent     = `${idx + 1} / ${ps.length}`;
 
-  grid.innerHTML = filtered.map((role, i) => `
-    <div class="role-card ${role.team}" style="animation-delay:${i*40}ms">
-      <div class="role-card-header">
-        <div class="role-emoji">${role.emoji}</div>
-        <div class="role-card-info">
-          <h3>${role.name[gameState.lang]}</h3>
-          <span class="role-tag ${role.team}">${role.tag[gameState.lang]}</span>
+  if (idx >= ps.length) {
+    // Done
+    document.getElementById('rev-who').textContent   = '';
+    document.getElementById('rev-count').textContent = 'Tất cả đã xem xong!';
+    if (isMC) {
+      document.getElementById('rev-start-btn').style.display = 'block';
+    } else {
+      document.getElementById('rev-mc-msg').style.display = 'block';
+      document.getElementById('rev-mc-msg').textContent   = '⏳ Chờ MC bắt đầu đêm...';
+    }
+    return;
+  }
+
+  const p = ps[idx];
+  document.getElementById('rev-who').textContent      = `Lượt xem bài của:`;
+  document.getElementById('rev-who-name').textContent = p.name;
+  document.getElementById('card-pname').textContent   = p.name;
+
+  // Card back
+  const cb   = document.getElementById('card-back');
+  const role = p.role;
+  cb.className = 'card-face card-back' + (role.team === 'wolf' ? ' wolf' : '');
+  document.getElementById('card-role-icon').textContent = role.icon;
+  document.getElementById('card-role-name').textContent = role.name;
+  document.getElementById('card-role-desc').textContent = role.desc;
+
+  // Chỉ người có id tương ứng mới thấy nút lật
+  if (myId === p.id) {
+    // Người này tự lật
+  } else if (isMC) {
+    // MC không lật, chỉ chờ
+  }
+}
+
+// ─── Game Board ───────────────────────────────────────────────
+function renderGameBoard(gs, myId) {
+  const grid  = document.getElementById('player-grid');
+  const isMC  = myId === gs.mcId;
+  const myP   = gs.players.find(p => p.id === myId);
+  const myRole = myP?.role;
+
+  grid.innerHTML = '';
+  gs.players.forEach(p => {
+    const div   = document.createElement('div');
+    const votes = gs.votes?.[p.id] || 0;
+    let cls = 'p-card';
+    if (!p.alive) cls += ' dead';
+    else if (gs.phase === 'day' && isMC) cls += ' clickable';
+
+    // Xem vai: MC không thấy ai, người chơi thấy đồng bọn sói của mình
+    const showRole = !isMC && myP && (
+      p.id === myId ||
+      (myRole?.team === 'wolf' && p.role.team === 'wolf')
+    );
+    const roleColor = p.role.color === 'wolf' ? 'var(--wolf)'
+      : p.role.color === 'special' ? 'var(--special)'
+      : p.role.color === 'neutral' ? 'var(--accent)'
+      : 'var(--village)';
+
+    div.className = cls;
+    div.dataset.id = p.id;
+    div.innerHTML = `
+      <div class="pc-avatar">${p.alive ? (showRole ? p.role.icon : '🙂') : '💀'}</div>
+      <div class="pc-name">${esc(p.name)}</div>
+      ${p.id === myId ? '<div class="pc-me">Bạn</div>' : ''}
+      ${showRole && p.alive ? `<div class="pc-role" style="color:${roleColor}">${p.role.name}</div>` : ''}
+      ${isMC && p.alive ? `<div class="pc-role" style="color:${roleColor}">${p.role.name}</div>` : ''}
+      ${votes > 0 ? `<div class="pc-votes">🗳 ${votes}</div>` : ''}
+      ${!p.alive ? '<div class="pc-dead-badge">💀</div>' : ''}
+      ${p.id === gs.mayorId && p.alive ? '<div class="pc-mayor">🎖️</div>' : ''}
+    `;
+
+    if (gs.phase === 'day' && p.alive && isMC) {
+      div.addEventListener('click', () => {
+        if (!gs.votes) gs.votes = {};
+        gs.votes[p.id] = (gs.votes[p.id] || 0) + 1;
+        saveRoom(App.room);
+        renderGameBoard(gs, myId);
+        showToast(`+1 phiếu → ${p.name} (${gs.votes[p.id]} phiếu)`);
+        renderVoteInfo(gs);
+      });
+    }
+    grid.appendChild(div);
+  });
+}
+
+function renderVoteInfo(gs) {
+  const box = document.getElementById('vote-info-box');
+  if (!box) return;
+  const sorted = Object.entries(gs.votes || {})
+    .map(([id, v]) => ({ name: gs.players.find(p => p.id === id)?.name || id, v }))
+    .sort((a, b) => b.v - a.v);
+  if (!sorted.length) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  box.innerHTML = '<div class="vi-title">🗳️ Phiếu hiện tại:</div>' +
+    sorted.map(e => `<div class="vi-row"><span>${esc(e.name)}</span><strong>${e.v} phiếu</strong></div>`).join('');
+}
+
+// ─── Night Panel ──────────────────────────────────────────────
+function renderNightPanel(gs, myId) {
+  const isMC   = myId === gs.mcId;
+  const panel  = document.getElementById('night-panel');
+  const stepsEl = document.getElementById('night-steps');
+  const actsEl  = document.getElementById('night-acts');
+  panel.style.display  = 'block';
+  document.getElementById('day-panel').style.display = 'none';
+
+  const alive     = gs.players.filter(p => p.alive);
+  const nightRoles = ROLES
+    .filter(r => r.hasNightAction)
+    .sort((a, b) => a.nightOrder - b.nightOrder);
+
+  if (isMC) {
+    // MC thấy hướng dẫn gọi từng vai
+    stepsEl.innerHTML = nightRoles.map(role => {
+      const has = alive.some(p => p.role.id === role.id);
+      return `<div class="n-step ${has ? 'active' : 'inactive'}">
+        <span class="ns-icon">${role.icon}</span>
+        <div>
+          <div class="ns-title">${role.name} ${!has ? '(không có trong game)' : ''}</div>
+          <div class="ns-desc">${role.nightDesc || '—'}</div>
         </div>
-      </div>
-      <p>${role.desc[gameState.lang]}</p>
-      <div class="role-ability">${role.ability[gameState.lang]}</div>
-    </div>
-  `).join('');
-}
+      </div>`;
+    }).join('');
 
-function filterRoles(filter) {
-  currentFilter = filter;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  event.target.classList.add('active');
-  renderRolesScreen();
-}
+    actsEl.innerHTML = '';
+    const btnEnd = document.createElement('button');
+    btnEnd.className   = 'btn-action vill';
+    btnEnd.textContent = '☀️ Kết thúc đêm → Sang ngày';
+    btnEnd.onclick     = () => App.mcEndNight();
+    actsEl.appendChild(btnEnd);
 
-// ===== TOAST =====
+  } else {
+    // Người chơi thấy hướng dẫn vai của mình
+    const me = gs.players.find(p => p.id === myId);
+    if (!me) return;
+    stepsEl.innerHTML = '';
+    actsEl.innerHTML  = '';
 
-let toastTimeout;
+    if (!me.alive) {
+      stepsEl.innerHTML = '<div class="n-step inactive"><div class="ns-title">💀 Bạn đã chết — Nhắm mắt, theo dõi game tiếp tục.</div></div>';
+      return;
+    }
 
-function showToast(msg, duration = 2500) {
-  const toast = document.getElementById('toast');
-  toast.textContent = msg;
-  toast.classList.add('show');
-  clearTimeout(toastTimeout);
-  toastTimeout = setTimeout(() => toast.classList.remove('show'), duration);
-}
+    if (me.role.hasNightAction) {
+      stepsEl.innerHTML = `<div class="n-step active">
+        <span class="ns-icon">${me.role.icon}</span>
+        <div>
+          <div class="ns-title">${me.role.name} — Lượt của bạn!</div>
+          <div class="ns-desc">${me.role.nightDesc}</div>
+        </div>
+      </div>`;
+    } else {
+      stepsEl.innerHTML = `<div class="n-step inactive">
+        <span class="ns-icon">😴</span>
+        <div>
+          <div class="ns-title">${me.role.name} — Bạn nhắm mắt đêm nay.</div>
+          <div class="ns-desc">Chờ MC thông báo sang ngày.</div>
+        </div>
+      </div>`;
+    }
 
-// ===== LANGUAGE =====
-
-function setLang(lang) {
-  gameState.lang = lang;
-  document.querySelectorAll('.lang-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.lang === lang);
-  });
-  updateLang();
-  // Re-render role screens if active
-  if (document.getElementById('screen-roles').classList.contains('active')) renderRolesScreen();
-  if (document.getElementById('screen-setup').classList.contains('active')) {
-    renderRolePicker();
-    updateRoleSummary();
+    // Wolf team thấy đồng bọn
+    if (me.role.team === 'wolf') {
+      const wolves = gs.players.filter(p => p.role.team === 'wolf' && p.id !== myId);
+      if (wolves.length) {
+        stepsEl.innerHTML += `<div class="n-step wolf-step">
+          <span class="ns-icon">🐺</span>
+          <div>
+            <div class="ns-title">Đồng bọn của bạn:</div>
+            <div class="ns-desc">${wolves.map(w => esc(w.name)).join(', ')}</div>
+          </div>
+        </div>`;
+      }
+    }
   }
 }
 
-function updateLang() {
-  document.querySelectorAll('[data-vi]').forEach(el => {
-    el.textContent = el.getAttribute(`data-${gameState.lang}`) || el.textContent;
-  });
-  // Input placeholder
-  const inp = document.getElementById('playerNameInput');
-  if (inp) inp.placeholder = gameState.lang === 'vi' ? 'Nhập tên người chơi...' : 'Enter player name...';
+// ─── Day Panel ────────────────────────────────────────────────
+function renderDayPanel(gs, myId, nightResult) {
+  const isMC   = myId === gs.mcId;
+  const panel  = document.getElementById('day-panel');
+  const announce = document.getElementById('day-announce');
+  const actsEl   = document.getElementById('day-acts');
+  panel.style.display  = 'block';
+  document.getElementById('night-panel').style.display = 'none';
+
+  let html = '';
+  if (nightResult.killed.length > 0) {
+    nightResult.killed.forEach(p => {
+      html += `<div class="ann-death">💀 <strong>${esc(p.name)}</strong> đã chết trong đêm! Vai: ${p.role.name}</div>`;
+      if (p.role.id === 'thoSan') {
+        html += `<div class="ann-info">🏹 <strong>${esc(p.name)}</strong> là <strong>Thợ Săn</strong> — MC cho phép bắn 1 người!</div>`;
+      }
+    });
+  } else {
+    html += `<div class="ann-safe">✨ Đêm bình yên! Không ai chết đêm qua.</div>`;
+  }
+  if (nightResult.saved.length > 0) {
+    html += `<div class="ann-info">💉 Có người đã được cứu trong đêm!</div>`;
+  }
+
+  if (isMC) {
+    html += `<div class="ann-vote">Nhấn vào tên người chơi để cộng phiếu bỏ phiếu. Nhấn nhiều lần = nhiều phiếu.</div>`;
+  } else {
+    html += `<div class="ann-vote">Thảo luận và tìm Ma Sói. MC đang thu phiếu bầu.</div>`;
+  }
+  announce.innerHTML = html;
+
+  actsEl.innerHTML = '';
+  if (isMC) {
+    const btnVote = document.createElement('button');
+    btnVote.className   = 'btn-action vill';
+    btnVote.textContent = '🗳 Xử lý phiếu bầu → Loại người';
+    btnVote.onclick     = () => App.mcResolveVote();
+    actsEl.appendChild(btnVote);
+
+    const btnReset = document.createElement('button');
+    btnReset.className   = 'btn-action';
+    btnReset.textContent = '🔄 Reset phiếu';
+    btnReset.onclick     = () => {
+      gs.votes = {};
+      renderVoteInfo(gs);
+      renderGameBoard(gs, myId);
+      showToast('Đã reset phiếu bầu!');
+    };
+    actsEl.appendChild(btnReset);
+  }
 }
 
-// ===== TRANSLATIONS =====
+// ─── Log ──────────────────────────────────────────────────────
+function renderLog(gs) {
+  const el = document.getElementById('log-entries');
+  if (!el || !gs.log) return;
+  el.innerHTML = (gs.log || []).slice(0, 30).map(e =>
+    `<div class="log-entry${e.important ? ' imp' : ''}">${e.t} — ${e.msg}</div>`
+  ).join('');
+}
 
-const TRANSLATIONS = {
-  vi: {
-    playerNameEmpty: '⚠️ Nhập tên người chơi!',
-    maxPlayers: '⚠️ Tối đa 20 người chơi!',
-    duplicateName: '⚠️ Tên đã tồn tại!',
-    needMorePlayers: '⚠️ Cần ít nhất 4 người chơi!',
-    roleMismatch: '⚠️ Số vai không khớp số người chơi!',
-    roles: 'Vai',
-    players2: 'Người',
-    needWolf: '⚠️ Cần ít nhất 1 Ma Sói!',
-    revealTitle: 'Xem Bài',
-    revealInstruct: 'Trao điện thoại cho người chơi:',
-    startNight: '🌙 Bắt đầu đêm đầu tiên!',
-    nextPlayer: '➡️ Người tiếp theo',
-    night: 'Đêm',
-    day: 'Ngày',
-    nightPhase: 'Pha Đêm',
-    nightGuide: 'Hướng dẫn MC',
-    nightStep_sleep: 'MC: "Tất cả nhắm mắt lại và ngủ ngon nhé. Đêm nay làng mình có những điều kỳ lạ xảy ra..."',
-    nightStep_cupid: 'Cupid thức dậy, chọn 2 người chơi làm đôi tình nhân (chỉ đêm 1). Sau đó ngủ lại.',
-    nightStep_seer: 'Tiên Tri thức dậy, chỉ vào 1 người. MC gật đầu (Ma Sói) hoặc lắc đầu (không phải). Sau đó ngủ lại.',
-    nightStep_doctor: 'Bác Sĩ / Vệ Binh thức dậy, chỉ vào 1 người cần bảo vệ. Sau đó ngủ lại.',
-    nightStep_wolf: 'Ma Sói thức dậy, nhận mặt nhau và cùng chọn 1 nạn nhân (chỉ vào). Sau đó ngủ lại.',
-    nightStep_witch: 'Phù Thủy thức dậy. MC tiết lộ ai bị Sói chọn (ẩn danh). Phù Thủy quyết định dùng thuốc cứu hay không, và có thể dùng thuốc độc. Sau đó ngủ lại.',
-    nightStep_dawn: 'MC: "Bình minh đến rồi! Tất cả thức dậy nào!" → Nhấn xác nhận để tiếp tục sang ngày.',
-    done: 'Xong ✓',
-    whoKilledTitle: '🌙 Đêm qua ai đã chết?',
-    whoKilledHint: 'Chọn người bị Ma Sói giết đêm qua (hoặc không ai nếu được cứu)',
-    noKill: '✅ Không ai chết (được cứu)',
-    cancel: 'Hủy',
-    confirm: 'Xác nhận',
-    hunterTitle: '🏹 Thợ Săn trả thù',
-    hunterDesc: 'Thợ Săn đã chết! Anh ta có thể bắn 1 người cùng chết.',
-    skip: 'Bỏ qua',
-    shoot: '🏹 Bắn!',
-    alive: '✅ Còn sống',
-    dead: '💀 Đã chết',
-    noDeathLastNight: 'Đêm yên bình, không ai chết!',
-    diedLastNight: 'Đêm qua đã mất',
-    dayDiscussion: 'Mọi người hãy thảo luận và tìm ra Ma Sói trong vòng!',
-    voteToEliminate: 'Bỏ phiếu trục xuất',
-    clickPlayerToVote: 'Nhấn vào người chơi trên bảng để bỏ phiếu',
-    eliminated: '🚫 Bị trục xuất',
-    timeUp: '⏰ Hết giờ thảo luận!',
-    noVote: '⚠️ Không ai bị bỏ phiếu, bỏ qua!',
-    villageWins: '🏡 Dân Làng Chiến Thắng!',
-    villageWinsDesc: 'Dân làng đã dũng cảm tìm ra và tiêu diệt tất cả bầy Ma Sói. Làng bình yên trở lại!',
-    wolfWins: '🐺 Ma Sói Chiến Thắng!',
-    wolfWinsDesc: 'Bóng tối bao phủ làng. Ma Sói đã chiếm quyền kiểm soát. Dân làng không còn lối thoát...',
-    jesterWins: '🃏 Tên Hề Chiến Thắng!',
-    jesterWinsDesc: 'đã thành công bị mọi người bỏ phiếu! Thắng lợi độc đáo thuộc về Tên Hề!',
-    cupidDone: '💘 Cupid đã chọn đôi tình nhân!',
-    seerDone: '🔮 Tiên Tri đã xem bài!',
-    doctorDone: '💊 Bác Sĩ đã chọn người bảo vệ!',
-    wolfDone: '🐺 Ma Sói đã chọn nạn nhân!',
-    witchDone: '🧙‍♀️ Phù Thủy đã quyết định!',
-  },
-  en: {
-    playerNameEmpty: '⚠️ Enter player name!',
-    maxPlayers: '⚠️ Maximum 20 players!',
-    duplicateName: '⚠️ Name already exists!',
-    needMorePlayers: '⚠️ Need at least 4 players!',
-    roleMismatch: '⚠️ Role count does not match player count!',
-    roles: 'Roles',
-    players2: 'Players',
-    needWolf: '⚠️ Need at least 1 Werewolf!',
-    revealTitle: 'Role Reveal',
-    revealInstruct: 'Pass the phone to:',
-    startNight: '🌙 Begin the first night!',
-    nextPlayer: '➡️ Next Player',
-    night: 'Night',
-    day: 'Day',
-    nightPhase: 'Night Phase',
-    nightGuide: 'MC Guide',
-    nightStep_sleep: 'MC: "Everyone close your eyes and sleep. Strange things are happening in our village tonight..."',
-    nightStep_cupid: 'Cupid wakes up, chooses 2 players to be lovers (Night 1 only). Then goes back to sleep.',
-    nightStep_seer: 'Seer wakes up, points at 1 player. MC nods (Werewolf) or shakes head (not Werewolf). Then sleeps.',
-    nightStep_doctor: 'Doctor / Guardian wakes up, points at 1 player to protect. Then goes back to sleep.',
-    nightStep_wolf: 'Werewolves wake up, recognize each other and point at a victim. Then go back to sleep.',
-    nightStep_witch: 'Witch wakes up. MC reveals who was attacked. Witch decides to heal or not, and can poison someone. Then sleeps.',
-    nightStep_dawn: 'MC: "Dawn has arrived! Everyone wake up!" → Press confirm to continue to day.',
-    done: 'Done ✓',
-    whoKilledTitle: '🌙 Who died last night?',
-    whoKilledHint: 'Select the player killed by Werewolves (or none if saved)',
-    noKill: '✅ Nobody died (saved)',
-    cancel: 'Cancel',
-    confirm: 'Confirm',
-    hunterTitle: '🏹 Hunter\'s Last Shot',
-    hunterDesc: 'The Hunter has died! They can shoot 1 player to die with them.',
-    skip: 'Skip',
-    shoot: '🏹 Shoot!',
-    alive: '✅ Alive',
-    dead: '💀 Dead',
-    noDeathLastNight: 'A peaceful night, nobody died!',
-    diedLastNight: 'Died last night',
-    dayDiscussion: 'Everyone discuss and find the Werewolves this round!',
-    voteToEliminate: 'Vote to Eliminate',
-    clickPlayerToVote: 'Tap a player on the board to cast your vote',
-    eliminated: '🚫 Eliminated',
-    timeUp: '⏰ Discussion time is up!',
-    noVote: '⚠️ No votes cast, skipping!',
-    villageWins: '🏡 Village Wins!',
-    villageWinsDesc: 'The brave villagers tracked down and eliminated all the Werewolves. The village is safe again!',
-    wolfWins: '🐺 Werewolves Win!',
-    wolfWinsDesc: 'Darkness falls over the village. The Werewolves have taken control. There is no escape for the villagers...',
-    jesterWins: '🃏 Jester Wins!',
-    jesterWinsDesc: 'successfully got voted out! An unusual victory for the Jester!',
-    cupidDone: '💘 Cupid has chosen the lovers!',
-    seerDone: '🔮 Seer has investigated a player!',
-    doctorDone: '💊 Doctor has chosen someone to protect!',
-    wolfDone: '🐺 Werewolves have chosen their victim!',
-    witchDone: '🧙‍♀️ Witch has made their decision!',
-  }
-};
+// ─── Winner ───────────────────────────────────────────────────
+function showWinner(result) {
+  document.getElementById('win-icon').textContent  = result.icon;
+  document.getElementById('win-title').textContent = result.title;
+  document.getElementById('win-desc').textContent  = result.desc;
+  document.getElementById('win-overlay').style.display = 'flex';
+}
 
-function T(key) {
-  return TRANSLATIONS[gameState.lang][key] || TRANSLATIONS['vi'][key] || key;
+// ─── Phase Header ─────────────────────────────────────────────
+function setPhase(text, mode) {
+  const el = document.getElementById('phase-label');
+  el.textContent = text;
+  el.className   = 'phase-label ' + mode; // 'night' | 'day'
+}
+
+// ─── Timer ────────────────────────────────────────────────────
+let _timerIv  = null;
+let _timerSec = 0;
+let _timerOn  = false;
+
+function startTimer()  {
+  if (_timerOn) return;
+  _timerOn = true;
+  _timerIv = setInterval(() => { _timerSec++; _updateTimerDisplay(); }, 1000);
+}
+function stopTimer()   { clearInterval(_timerIv); _timerOn = false; }
+function resetTimer()  { stopTimer(); _timerSec = 0; _updateTimerDisplay(); }
+function toggleTimer() {
+  if (_timerOn) stopTimer(); else startTimer();
+}
+function _updateTimerDisplay() {
+  const m = String(Math.floor(_timerSec / 60)).padStart(2, '0');
+  const s = String(_timerSec % 60).padStart(2, '0');
+  const el = document.getElementById('timer-display');
+  el.textContent = `${m}:${s}`;
+  el.className   = 'timer-display' + (_timerSec >= 180 ? ' urgent' : '');
+}
+
+// ─── Copy ─────────────────────────────────────────────────────
+function copyRoomId(id) {
+  navigator.clipboard.writeText(id).catch(() => {});
+  const tip = document.getElementById('copied-tip');
+  tip.classList.add('show');
+  setTimeout(() => tip.classList.remove('show'), 2000);
+}
+
+// ─── Util ─────────────────────────────────────────────────────
+function esc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
